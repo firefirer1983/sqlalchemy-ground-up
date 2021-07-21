@@ -1,5 +1,7 @@
 import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, scoped_session
+from contextlib import contextmanager
 
 Base = declarative_base()
 
@@ -17,6 +19,22 @@ class Child(Base):
 
 
 db = sa.create_engine("sqlite:///my.sqlite3?check_same_thread=False", echo=True)
+Session = sessionmaker(bind=db)
+ScopedSession = scoped_session(Session)
+
+
+@contextmanager
+def session_scoped(autocommit=False):
+    s = Session()
+    try:
+        yield s
+        if autocommit:
+            s.commit()
+    except Exception as e:
+        s.rollback()
+        raise e
+    finally:
+        s.close()
 
 
 def main():
