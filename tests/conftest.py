@@ -41,7 +41,9 @@ def test_connect():
             [{"name": "ruiheng"}, {"name": "ryon"}]
         )
         yield c
-        # c.execute(sa.text("""
-        # DROP TABLE tb_parent;
-        # DROP TABLE tb_children
-        # """))
+        c.execute(sa.text("""
+            DROP TABLE tb_parent;
+        """))
+        c.execute(sa.text("""
+            DROP TABLE tb_children;
+        """))
