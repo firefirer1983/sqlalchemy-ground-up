@@ -14,5 +14,8 @@ def test_result_proxy(test_connect: Connection):
     assert type(row) == RowProxy
     
     cols = iter(row)
+    assert hasattr(row, "id")
+    assert type(row["id"]) == int
+    row.name = "fyman"
     col = next(cols)
     assert type(col) is int
