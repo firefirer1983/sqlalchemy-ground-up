@@ -30,8 +30,10 @@ def session_scoped(autocommit=False):
         yield s
         if autocommit:
             s.commit()
+            Parent.query.filter_by(id=1).first()
     except Exception as e:
         s.rollback()
+        s.adds()
         raise e
     finally:
         s.close()
@@ -41,5 +43,5 @@ def main():
     Base.metadata.create_all(db)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
