@@ -10,12 +10,22 @@ class Parent(Base):
     __tablename__ = "tb_parent"
     id = sa.Column("id", sa.Integer, primary_key=True)
     name = sa.Column("name", sa.String(16), nullable=False)
+    child_id = sa.Column("child_id", sa.Integer)
+    @property
+    def age(self) -> str:
+        return 10
+
+    @age.setter
+    def age(self, val):
+        print(f"set age to {val}")
+
 
 
 class Child(Base):
     __tablename__ = "tb_child"
     id = sa.Column("id", sa.Integer, primary_key=True)
     name = sa.Column("name", sa.String(16), nullable=False)
+    parent_id = sa.Column("parent_id", sa.Integer)
 
 
 db = sa.create_engine("sqlite:///my.sqlite3?check_same_thread=False", echo=True)
@@ -24,17 +34,13 @@ ScopedSession = scoped_session(Session)
 
 
 @contextmanager
-def session_scoped(autocommit=False):
+def scope_session():
     s = Session()
     try:
         yield s
-        if autocommit:
-            s.commit()
-            Parent.query.filter_by(id=1).first()
-    except Exception as e:
+    except Exception:
         s.rollback()
-        s.adds()
-        raise e
+        raise
     finally:
         s.close()
 
