@@ -1,0 +1,26 @@
+[MASTER]
+# ignore=app/printhub
+	
+# init-hook="import os, sys; sys.path.insert(0, '/home/xy/repo/sqlalchemy-ground-up'); sys.path.insert(0, '/home/xy/repo/sqlalchemy-ground-up/venv/lib/python3.6/site-packages')"
+init-hook="import os, sys; sys.path.insert(0, '/home/xy/repo/sqlalchemy-ground-up')"
+load-plugins=pylint_flask_sqlalchemy,pylint_flask
+[VARIABLES]
+# TODO(https://github.com/PyCQA/pylint/issues/1345): How does the inspection
+# not include "unused_" and "ignored_" by default?
+# dummy-variables-rgx=^ignored_|^unused_
+[DESIGN]
+# NOTE(nathaniel): Not particularly attached to this value; it just seems to
+# be what works for us at the moment (excepting the dead-code-walking Beta
+# API).
+max-args=12
+[MISCELLANEOUS]
+# NOTE(nathaniel): We are big fans of "TODO(<issue link>): " and
+# "NOTE(<username or issue link>): ". We do not allow "TODO:",
+# "TODO(<username>):", "FIXME:", or anything else.
+notes=FIXME,XXX
+[MESSAGES CONTROL]
+disable=
+	C0114, # (missing-module-docstring)
+	C0115, # (missing-class-docstring)
+	C0116, # (missing-function-docstring)
+	R0903, # (too-few-public-methods) 
