@@ -2,11 +2,10 @@
 from __future__ import annotations
 
 import sqlalchemy as sa
-from typing import List
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker, backref
+from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
+from sqlalchemy.orm import relationship, sessionmaker
 
-Base = declarative_base()
+Base: DeclarativeMeta = declarative_base()
 
 
 class Parent(Base):
@@ -14,12 +13,11 @@ class Parent(Base):
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String(16), nullable=False)
 
-    children: List[Child] = relationship("Child", back_populates="parent", uselist=True)
+    # children: List[Child] = relationship("Child", back_populates="parent", uselist=True)
 
     def __repr__(self) -> str:
         children_list = ",".join([f"{c.id}:{c.name} " for c in self.children])
         return f"{self.id}:{self.name}, parent of [ {children_list} ]"
-
 
 
 class Child(Base):
@@ -31,7 +29,8 @@ class Child(Base):
     parent: Parent = relationship(
         "Parent",
         foreign_keys=[parent_id],
-        back_populates="children",
+        # back_populates="children",
+        backref="children",
         primaryjoin="Parent.id==Child.parent_id",
     )
 
