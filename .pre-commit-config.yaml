@@ -1,14 +1,55 @@
-# See https://pre-commit.com for more information
-# See https://pre-commit.com/hooks.html for more hooks
 repos:
--   repo: local
-    hooks:
-    - id: isort
-      name: run isort
-      entry: isort
-      language: system
-    - id: black
-      name: run black
-      entry: black
-      language: system
-    
+- repo: local
+  hooks:
+  # - id: trailing-whitespace
+  #   name: run trailing-whitespace
+  #   entry: trailing-whitespace-fixer
+  #   language: system
+
+  # - id: check-yaml
+  #   name: run check-yaml
+  #   entry: check-yaml
+  #   language: system
+  #   types: [file]
+  #   files: \.(yaml|yml)$
+
+  # - id: check-added-large-files
+  #   name: run check-added-large-files
+  #   entry: check-added-large-files
+  #   language: system
+
+  # - id: flake8
+  #   name: run flake8
+  #   entry: flake8 --config=.flake8
+  #   language: system
+  #   types: [file]
+  #   files: \.(py|pyi)$
+
+  # - id: isort
+  #   name: run isort
+  #   entry: isort --settings-path=pyproject.toml
+  #   language: system
+  #   types: [file]
+  #   files: \.(py|pyi)$
+
+  # - id: black
+  #   name: run black
+  #   entry: black --config=pyproject.toml
+  #   language: system
+  #   types: [file]
+  #   files: \.(py|pyi)$
+
+  # - id: pycln
+  #   name: run pycln
+  #   entry: pycln --config=pyproject.toml
+  #   language: system
+  #   types: [file]
+  #   files: \.(py|pyi)$
+
+  - id: mypy
+    name: run mypy
+    entry: mypy --config-file=mypy.ini
+    language: system
+    types: [file]
+    files: \.(py|pyi)$
+

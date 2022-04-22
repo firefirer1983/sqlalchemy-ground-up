@@ -1,9 +1,9 @@
 #! /usr/bin/env python
 
+
 import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
-from contextlib import contextmanager
+from sqlalchemy.orm import relationship, sessionmaker
 
 Base = declarative_base()
 

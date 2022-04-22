@@ -1,7 +1,8 @@
+from contextlib import contextmanager
+
 import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, scoped_session
-from contextlib import contextmanager
+from sqlalchemy.orm import scoped_session, sessionmaker
 
 Base = declarative_base()
 

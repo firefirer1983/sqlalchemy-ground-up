@@ -1,8 +1,9 @@
+import os
+from contextlib import contextmanager
+
 import sqlalchemy
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, scoped_session
-from contextlib import contextmanager
-import os
+from sqlalchemy.orm import scoped_session, sessionmaker
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
@@ -27,4 +28,3 @@ def session_scoped(autocommit=False):
         raise e
     finally:
         s.close()
-
