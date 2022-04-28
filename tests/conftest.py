@@ -1,60 +1,61 @@
 import os
 import sys
 
-import pytest as pt
-import sqlalchemy as sa
+import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm.scoping import scoped_session
+
+from sgu.models import Base, Child, Company, Employee, Husband, Parent, Wife
 
 TEST_BASE_PATH = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(TEST_BASE_PATH)
 
+memory_db = create_engine("sqlite://", echo=True)
+local_db = create_engine("sqlite:///test.sqlite3?check_same_thread=False", echo=True)
+mysql_db = create_engine(
+    "mysql+pymysql://root:123456789@127.0.0.1:3306/test?charset=utf8mb4", echo=True
+)
+db = memory_db
+Session = sessionmaker(bind=memory_db)
 
-@pt.fixture(scope="module")
-def test_connect():
 
-    db_ = sa.create_engine("sqlite:///tmp.sqlite3", echo=True)
-    with db_.connect() as c:
-        c.execute(
-            sa.text(
-                """
-        CREATE TABLE IF NOT EXISTS tb_parent (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name VARCHAR(16) NOT NULL ,
-            child_id INTEGER references tb_children
-        )
-        """
-            )
-        )
-        c.execute(
-            sa.text(
-                """
-        CREATE TABLE IF NOT EXISTS tb_children (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name VARCHAR(16) NOT NULL ,
-            parent_id INTEGER references tb_parent
-        )
-        """
-            )
-        )
-        c.execute(
-            sa.text(
-                """
-                INSERT INTO tb_parent (name) VALUES (:name)
-            """
-            ),
-            [{"name": "xy"}, {"name": "xiaoxiao"}],
-        )
-        c.execute(
-            sa.text(
-                """
-                INSERT INTO tb_children (name) VALUES (:name)
-            """
-            ),
-            [{"name": "ruiheng"}, {"name": "ryon"}],
-        )
-        yield c
-        # c.execute(sa.text("""
-        #     DROP TABLE tb_parent;
-        # """))
-        # c.execute(sa.text("""
-        #     DROP TABLE tb_children;
-        # """))
+@pytest.fixture()
+def schema():
+    if db == mysql_db:
+        return
+    Base.metadata.create_all(db)
+    yield
+    Base.metadata.drop_all(db)
+
+
+@pytest.fixture(autouse=True)
+def env(schema):
+    s = scoped_session(Session)
+    company = Company(name="ikasinfo")
+    company.employees = [Employee(name="xy"), Employee(name="djm")]
+    s.add(company)
+    child = Child(name="jerry")
+    child.parents = [Parent(name="xy"), Parent(name="xiao")]
+    s.add(child)
+    wife = Wife(name="xiao")
+    wife.husband = Husband(name="xy")
+    s.commit()
+
+
+@pytest.fixture()
+def session():
+    s = scoped_session(Session)
+    try:
+        yield s
+    except Exception:
+        s.rollback()
+        s.remove()
+        raise
+
+
+@pytest.fixture(scope="session")
+def faker():
+    from faker import Faker
+
+    return Faker()

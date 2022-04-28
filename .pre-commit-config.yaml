@@ -48,7 +48,7 @@ repos:
 
   - id: mypy
     name: run mypy
-    entry: mypy --config=mypy.ini
+    entry: mypy --config-file=pyproject.toml
     language: system
     types: [file]
     files: \.(py|pyi)$

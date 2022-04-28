@@ -1,4 +1,1 @@
 sqlalchemy
-pytest
-pylint_flask_sqlalchemy
-pylint_flask

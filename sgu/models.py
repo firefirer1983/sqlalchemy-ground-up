@@ -1,79 +1,112 @@
-from datetime import datetime
+from __future__ import annotations
 
-import sqlalchemy as sa
-from sqlalchemy.orm import relationship
+from typing import List
 
-from . import Base
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import RelationshipProperty, relationship
 
-# one-to-one: 夫妻关系,是一对一的关系,丈夫只有一个妻子,妻子只有一个丈夫
-
-
-class Man(Base):
-    __tablename__ = "tb_man"
-    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    create_time = sa.Column(sa.DateTime, default=datetime.now)
-    update_time = sa.Column(sa.DateTime, default=datetime.now, onupdate=datetime.now)
-    name = sa.Column(sa.String(16), nullable=False)
-
-    wife = relationship("Woman", backref="husband", uselist=False)
-
-    def __repr__(self):
-        return f"<Man id={self.id}, name={self.name}>"
+Base = declarative_base()
 
 
-class Woman(Base):
-    __tablename__ = "tb_woman"
-    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    create_time = sa.Column(sa.DateTime, default=datetime.now)
-    update_time = sa.Column(sa.DateTime, default=datetime.now, onupdate=datetime.now)
-    name = sa.Column(sa.String(16), nullable=False)
-    husband_id = sa.Column(sa.Integer, sa.ForeignKey("tb_man.id"))
-    #
-    # husband = relationship("Man", uselist=False)
-    #
+class Employee(Base):
+    __tablename__ = "tb_employee"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(32), index=True, nullable=False)
+    company_id = Column(Integer)
+    company: RelationshipProperty[Company] = relationship(
+        "Company",
+        foreign_keys=[company_id],
+        primaryjoin="Employee.company_id==Company.id",
+        back_populates="employees",
+    )
 
-    def __repr__(self):
-        return f"<Woman id={self.id}, name={self.name}>"
+    def __repr__(self) -> str:
+        return f"Employee(id={self.id}, name={self.name} @<{self.company.name}>)"
 
 
-#
-# # one-to-many: 雇佣关系,是一对多的关系,雇主有多个雇员,雇员只有一个雇主
-# class Employer(Base):
-#     __tablename__ = "tb_employer"
-#     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-#     name = sa.Column(sa.String(16), nullable=False)
-#     employee = relationship("Employee", backref="employer")
-#
-#
-# class Employee(Base):
-#     __tablename__ = "tb_employee"
-#     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-#     name = sa.Column(sa.String(16), nullable=False)
-#     boss_id = sa.Column(sa.Integer, sa.ForeignKey("tb_employer.id"))
-#
-#
-# # many-to-many: 订阅关系,是多对多的关系,一个用户有多个订阅的频道,一个频道有多个订阅者
-# class SubscribeRelation(Base):
-#     __tablename__ = "tb_subscribe_relation"
-#     user_id = sa.Column(
-#         sa.Integer, sa.ForeignKey('tb_user.id'), primary_key=True
-#     ),
-#     channel_id = sa.Column(
-#         sa.Integer, sa.ForeignKey('tb_channel.id'), primary_key=True
-#     )
-#
-#
-# class User(Base):
-#     __tablename__ = "tb_user"
-#     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-#     name = sa.Column(sa.String(16), nullable=False)
-#     subscriptions = relationship(
-#         "Channel", secondary=SubscribeRelation, backref="subscribers",
-#         lazy="dynamic"
-#     )
-#
-#
-# class Channel(Base):
-#     __tablename__ = "tb_channel"
-#     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-#     name = sa.Column(sa.String(16), nullable=False)
+class Company(Base):
+    __tablename__ = "tb_company"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(32), index=True, nullable=False)
+    employees: RelationshipProperty[List[Employee]] = relationship(
+        "Employee",
+        uselist=True,
+        foreign_keys="Employee.company_id",
+        primaryjoin="Employee.company_id==Company.id",
+        back_populates="company",
+    )
+
+    def __repr__(self) -> str:
+        return f"Compay(id={self.id}, name={self.name}, \
+        employees={[emp for emp in self.employees]})"
+
+
+class Parenting(Base):
+    __tablename__ = "tb_child_parent"
+    id = Column(Integer, primary_key=True)
+    parent_id = Column(Integer, index=True)
+    child_id = Column(Integer, index=True)
+
+
+class Child(Base):
+    __tablename__ = "tb_child"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(32), nullable=False)
+    parents: RelationshipProperty[List[Parent]] = relationship(
+        "Parent",
+        uselist=True,
+        secondary="tb_child_parent",
+        primaryjoin="Child.id==Parenting.child_id",
+        secondaryjoin="Parenting.parent_id==Parent.id",
+        back_populates="children",
+    )
+
+    def __repr__(self) -> str:
+        return f"Child(id={self.id}, name={self.name}, \
+        parents={[p.name for p in self.parents]})"
+
+
+class Parent(Base):
+    __tablename__ = "tb_parent"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(32), nullable=False)
+    children: RelationshipProperty[List[Child]] = relationship(
+        "Child",
+        uselist=True,
+        secondary="tb_child_parent",
+        primaryjoin="Parent.id==Parenting.parent_id",
+        secondaryjoin="Parenting.child_id==Child.id",
+        back_populates="parents",
+    )
+
+    def __repr__(self) -> str:
+        return f"Parent(id={self.id}, name={self.name}, \
+        children={[c.name for c in self.children]})"
+
+
+class Wife(Base):
+    __tablename__ = "tb_wife"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(32), nullable=False)
+    husband_id = Column(Integer)
+    husband = relationship(
+        "Husband",
+        uselist=False,
+        foreign_keys=[husband_id],
+        primaryjoin="Wife.husband_id==Husband.id",
+        back_populates="wife",
+    )
+
+
+class Husband(Base):
+    __tablename__ = "tb_husband"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(32), nullable=False)
+    wife = relationship(
+        "Wife",
+        uselist=False,
+        foreign_keys="Wife.husband_id",
+        primaryjoin="Wife.husband_id==Husband.id",
+        back_populates="husband",
+    )
