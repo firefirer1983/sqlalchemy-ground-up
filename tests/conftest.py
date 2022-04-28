@@ -35,9 +35,11 @@ def env(schema):
     company = Company(name="ikasinfo")
     company.employees = [Employee(name="xy"), Employee(name="djm")]
     s.add(company)
-    child = Child(name="jerry")
-    child.parents = [Parent(name="xy"), Parent(name="xiao")]
-    s.add(child)
+    children = [Child(name="jerry"), Child(name="darling")]
+    parents = [Parent(name="xy"), Parent(name="xiao")]
+    for parent in parents:
+        parent.children = children
+    s.add_all(parents)
     wife = Wife(name="xiao")
     wife.husband = Husband(name="xy")
     s.commit()

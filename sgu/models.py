@@ -4,7 +4,7 @@ from typing import List
 
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import RelationshipProperty, relationship
+from sqlalchemy.orm import relationship
 
 Base = declarative_base()
 
@@ -14,7 +14,7 @@ class Employee(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(32), index=True, nullable=False)
     company_id = Column(Integer)
-    company: RelationshipProperty[Company] = relationship(
+    company: Company = relationship(  # type: ignore
         "Company",
         foreign_keys=[company_id],
         primaryjoin="Employee.company_id==Company.id",
@@ -29,7 +29,7 @@ class Company(Base):
     __tablename__ = "tb_company"
     id = Column(Integer, primary_key=True)
     name = Column(String(32), index=True, nullable=False)
-    employees: RelationshipProperty[List[Employee]] = relationship(
+    employees: List[Employee] = relationship(  # type: ignore
         "Employee",
         uselist=True,
         foreign_keys="Employee.company_id",
@@ -53,7 +53,7 @@ class Child(Base):
     __tablename__ = "tb_child"
     id = Column(Integer, primary_key=True)
     name = Column(String(32), nullable=False)
-    parents: RelationshipProperty[List[Parent]] = relationship(
+    parents: List[Parent] = relationship(  # type: ignore
         "Parent",
         uselist=True,
         secondary="tb_child_parent",
@@ -71,7 +71,7 @@ class Parent(Base):
     __tablename__ = "tb_parent"
     id = Column(Integer, primary_key=True)
     name = Column(String(32), nullable=False)
-    children: RelationshipProperty[List[Child]] = relationship(
+    children: List[Child] = relationship(  # type: ignore
         "Child",
         uselist=True,
         secondary="tb_child_parent",
