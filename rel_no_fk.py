@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 from __future__ import annotations
-
+from typing import List
 import sqlalchemy as sa
 from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
@@ -8,34 +8,62 @@ from sqlalchemy.orm import relationship, sessionmaker
 Base: DeclarativeMeta = declarative_base()
 
 
+# tb_parent_child = sa.Table(
+#     "tb_parent_child",
+#     Base.metadata,
+#     sa.Column("parent_id", sa.Integer, primary_key=True),
+#     sa.Column("child_id", sa.Integer, primary_key=True),
+# )
+
+class ParentChild(Base):
+    __tablename__ = "tb_parent_child"
+    # id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    parent_id = sa.Column(sa.Integer, primary_key=True)
+    child_id = sa.Column(sa.Integer, primary_key=True)
+
+
 class Parent(Base):
     __tablename__ = "tb_parent"
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     name = sa.Column(sa.String(16), nullable=False)
+    is_vip = sa.Column(sa.Boolean, default=False)
 
-    # children: List[Child] = relationship("Child", back_populates="parent", uselist=True)
+    def __init__(self, name: str) -> None:
+        super().__init__(name=name)
+
+    children: List[Child] = relationship(
+        "Child",
+        secondary="tb_parent_child",
+        back_populates="parents",
+        primaryjoin="ParentChild.parent_id==Parent.id",
+        secondaryjoin="ParentChild.child_id==Child.id"
+    )
 
     def __repr__(self) -> str:
         children_list = ",".join([f"{c.id}:{c.name} " for c in self.children])
-        return f"{self.id}:{self.name}, parent of [ {children_list} ]"
+        return f"{self.id}:{self.name}, parent of {children_list}"
 
 
 class Child(Base):
     __tablename__ = "tb_child"
-    id = sa.Column(sa.Integer, primary_key=True)
-    name = sa.Column(sa.String(16), nullable=False)
-    parent_id = sa.Column(sa.Integer)
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
 
-    parent: Parent = relationship(
+    def __init__(self, name: str) -> None:
+        super().__init__(name=name)
+
+    name = sa.Column(sa.String(16), nullable=False)
+
+    parents: List[Parent] = relationship(
         "Parent",
-        foreign_keys=[parent_id],
-        # back_populates="children",
-        backref="children",
-        primaryjoin="Parent.id==Child.parent_id",
+        secondary="tb_parent_child",
+        back_populates="children",
+        primaryjoin=("Child.id==ParentChild.child_id"),
+        secondaryjoin=("ParentChild.parent_id==Parent.id")
     )
 
     def __repr__(self) -> str:
-        return f"{self.id}:{self.name}, child of {self.parent.id}:{self.parent.name}"
+        parents_list = ",".join([f"{p.id}:{p.name}" for p in self.parents])
+        return f"{self.id}:{self.name}, child of {parents_list}"
 
 
 db = sa.create_engine("sqlite:///rel_no_fk.sqlite3?check_same_thread=False", echo=True)
@@ -44,8 +72,8 @@ s = Session()
 
 
 def main():
-    p = Parent()
-    p.children = [Child(), Child()]
+    # p = Parent()
+    # p.children = [Child(), Child()]
     Base.metadata.create_all(db)
 
 
