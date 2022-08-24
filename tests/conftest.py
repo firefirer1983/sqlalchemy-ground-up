@@ -2,7 +2,7 @@ import os
 import sys
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.scoping import scoped_session
 
@@ -22,11 +22,10 @@ Session = sessionmaker(bind=memory_db)
 
 @pytest.fixture()
 def schema():
-    if db == mysql_db:
-        return
     Base.metadata.create_all(db)
     yield
-    Base.metadata.drop_all(db)
+    if db != mysql_db:
+        Base.metadata.drop_all(db)
 
 
 @pytest.fixture(autouse=True)
@@ -54,6 +53,21 @@ def session():
         s.rollback()
         s.remove()
         raise
+
+
+@pytest.fixture()
+def nested():
+    s = scoped_session(Session)
+    s.begin_nested()
+    yield s
+
+    @event.listens_for(s, "after_transaction_end")
+    def restart_savepoint(s, t):
+        if t.nested and (t._parent is not None and not t._parent.nested):
+            s.expire_all()
+            s.begin_nested()
+
+    event.remove(s, "after_transaction_end", restart_savepoint)
 
 
 @pytest.fixture(scope="session")

@@ -30,11 +30,13 @@ class TestRelationship:
     @allure.story("一对多用any(Company.employees.any)")
     def test_2(self, session, faker):
         """
+
         SELECT *
         FROM tb_company
         WHERE EXISTS (SELECT 1
         FROM tb_employee
-        WHERE tb_employee.company_id = tb_company.id AND tb_employee.name='xxx
+        WHERE tb_employee.company_id = tb_company.id AND tb_employee.name='xxx'
+
         """
 
         EMPLOYEE_COUNT = 3
