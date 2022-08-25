@@ -2,11 +2,10 @@
 from __future__ import annotations
 from typing import List
 import sqlalchemy as sa
-from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 
-Base: DeclarativeMeta = declarative_base()
-
+Base = declarative_base()
 
 # tb_parent_child = sa.Table(
 #     "tb_parent_child",
@@ -66,15 +65,21 @@ class Child(Base):
         return f"{self.id}:{self.name}, child of {parents_list}"
 
 
-db = sa.create_engine("sqlite:///rel_no_fk.sqlite3?check_same_thread=False", echo=True)
+db = sa.create_engine("sqlite://", echo=True)
 Session = sessionmaker(bind=db)
 s = Session()
 
 
 def main():
-    # p = Parent()
-    # p.children = [Child(), Child()]
     Base.metadata.create_all(db)
+    h = Parent("xy")
+    w = Parent("xx")
+    h.children = w.children = [Child("ray"), Child("darlin")]
+    s.add(h)
+    s.commit()
+    xy, xx = s.query(Parent).all()
+    print(xy)
+    print(xx)
 
 
 if __name__ == "__main__":
