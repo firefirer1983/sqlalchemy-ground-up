@@ -1,0 +1,228 @@
+#+TITLE:  SQLAlchemy学习
+#+AUTHOR: 张旭毅
+#+OPTIONS: num:nil ^:nil \n:t
+#+SETUPFILE: theme-readtheorg.setup
+
+
+* 概述
+如何查看SQLAlchemy版本
+#+begin_src python :results output
+import sqlalchemy
+print(sqlalchemy.__version__)
+
+#+end_src
+
+#+RESULTS:
+: 1.3.8
+
+* SQLAlchemy ORM
+** Object Relational Tutorial
+1. ~Mapping~ SQLAlchemy ORM 提供了一个将用户定义的Python类与数据库表相关联的方法.
+   - 类的定义对应是表结构.
+   - 类的实例对应是行数据.
+2. ~Unit-Of-Work~ SQLAlchemy ORM 提供了一个对用户透明的同步系统.
+   - 作用是提供Python instances与数据行之间的自动同步功能.
+3. ~Relationships~ and ~Query~
+   - 将使用relationship对象与query对象,实现查询及多表联查
+** Connection
+~懒连接~ 当创建Engine对象的时候,并不会连接数据库,只有当执行 Engine.connect, Engine.execute才连接.
+#+begin_src python :results output
+from sqlalchemy import create_engine
+engine = create_engine('sqlite:///:memory:', echo=True)
+#+end_src
+
+** Declare a Mapping(Schema) 声明映射
+1. 创建Mapping by(Declarative Base)
+#+begin_src python :results output
+from sqlalchemy.ext.declarative import declarative_base
+Base = declarative_base()
+#+end_src
+
+2.创建Mapping,同时自动创建 Table Object.
+至少需要 ==__tablename__== 与主键.
+#+begin_src python :results output
+from sqlalchemy import Column, Integer, String
+class User(Base):
+    __tablename__ = 'users'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    fullname = Column(String)
+    nickname = Column(String)
+
+>>> User.__table__
+Table('users', MetaData(),
+      Column('id', Integer(), table=<users>, primary_key=True, nullable=False), schema=None)
+
+#+end_src
+
+3. 声明Schema类的时候, Declarative系统会使用metaclass去创建一个Table对象.与类关联.
+
+** Metadata (Registry)
+Metadata是所有schema的登记台,同时可创建数据库表
+#+begin_src python :results output
+>>> Base.metadata.create_all(engine)
+SELECT ...
+PRAGMA main.table_info("users")
+()
+PRAGMA temp.table_info("users")
+()
+CREATE TABLE users (
+    id INTEGER NOT NULL, name VARCHAR,
+    fullname VARCHAR,
+    nickname VARCHAR,
+    PRIMARY KEY (id)
+)
+()
+COMMIT
+#+end_src
+
+** 创建Mapped Class的实例
+Declarative系统会默认定义一个 ==__init__==
+#+begin_src python :results output
+>>> ed_user = User(name='ed', fullname='Ed Jones', nickname='edsnickname')
+>>> ed_user.name
+#+end_src
+
+** 创建一个Session
+Session对象,只是一个存储所有ORM对象的workspace.
+
+- 即时绑定database
+  #+begin_src python :results output
+  from sqlalchemy import sessionmaker
+  Session = sessionmaker(bind=engine)
+  #+end_src
+- 延迟绑定database
+  #+begin_src python :results output
+  Session.configure(bind=engine)
+  #+end_src
+
+** Adding/Updating Objects
+此时,ed_user为 **pending** 状态,并未执行任何SQL.
+当我们主动flush,或者查询 ==Ed Jones== 时候,才会执行SQL
+#+begin_src python :results output
+>>> ed_user = User(name='ed', fullname='Ed Jones', nickname='edsnickname')
+>>> session.add(ed_user)
+#+end_src
+
+** Identity Map
+保证在 ~一个session~ 内的任意一行数据,都是同一个python对象.
+session会跟踪同一行的所有状态
+- dirty 被修改的对象列表
+- new 新创建的对象列表
+** Rolling Back
+只要没有commit的tansaction都可以rollback
+** Querying
+- 当session调用query()函数的时候,一个Query对象会被创建.
+- query函数的入参可以是ORM类,也可以是class-instrumented descriptor(User.name)
+  #+begin_src python :results output
+  for name, funname in session.query(User.name, User.fullname):
+      print(name, fullname)
+  #+end_src
+- 一旦多个类,或者任何列表达式作为query()的参数,查询结果将会返回元组(==KeyedTuple==)
+- 可以通过label的函数来控制返回的列名
+  #+begin_src python :results output
+  for row in session.query(User.name.label('name_label')).all():
+      print(row.name_label)
+  #+end_src
+- Limit和Offset的功能,可以通过python的切片来实现
+  #+begin_src python :results output
+  for u in session.query(User).order_by(User.id)[1:3]:
+      print(u)
+  #+end_src
+- =first=
+- =all=
+- =one= 查询所有的行,如果有且只有有一个结果则返回,否则raise
+- =one_or_none= 如同one查询所有的行,如果0或1个结果则返回,否则raise
+- =scalar= 先通过one()查询行,然后返回此行的第一个列
+- =params= 设置绑定参数
+  #+begin_src python :results output
+  session.query(User).filter(text("id<:value and name=:name")).\
+  params(value=224, name='fred').order_by(User.id).one()
+  #+end_src
+- =from_statement= 使用完整的SQL查询
+  #+begin_src python :results output
+  session.query(User).from_statement(text("SELECT * FROM users where name=:name"))\
+  .params(name='ed').all()
+  #+end_src
+- =columns= 优雅地指定待查询列名
+  #+begin_src python :results output
+  stmt = stmt.columns(User.name, User.id, User.fullname, User.nickname)
+  session.query(User).from_statement(stmt).params(name='ed').all()
+  #+end_src
+- =count= 当使用Query.count()函数的时候,默认会使用子查询的方式获取.
+  #+begin_src sql
+  SELECT count(*) AS count_1
+  FROM (SELECT users.id AS users_id,
+                users.name AS users_name,
+                users.fullname AS users_fullname,
+                users.nickname AS users_nickname
+  FROM users
+  WHERE users.name LIKE ?) AS anon_1
+  ('%ed',)
+  #+end_src
+- =select_from= 当query()里面没法放ORM对象的时候,使用 =select_from=
+  #+begin_src python :results output
+  session.query(func.count('*')).select_from(User).scalar()
+  #+end_src
+
+
+
+
+
+
+
+
+** Relationship
+- 外键一般都是与另一个表的主键相关联,或者另一个表的UNIQUE的列关联
+- 如果一个外键与另外一个表的多个列关联,那么这就是复合外键(composite foreign key)
+- 如果一个外键回自动更新,那么这种行为称为 =CASADE referential action=, 这是关系型数据库的一个内嵌功能.
+  =CASADE UPDATE=: 当被关联表的主键被修改了,那么关联表的外键也会被数据库自动更新
+  =CASADE DELETE=: 当被关联表的主键被删除了,那么关联表的外键也会被数据库自动删除
+- 如果一个外键与自表关联: =self-referential= 外键
+** Working with Related Objects
+- 一对多的情况,多的那个表中的Relation为数组或字典
+- 当使用双向的relationship时候,一个方向上增添,会自动更新到另外一个方向.这种神奇的效果,是基于 =on-change events= 实现的,纯Python,非SQL
+- 当新增一个对象加到Session里面时候,其相关联的Relation Object也会被自动加到Session里面,这个过程称为 =casading=
+** Querying with joins
+- 有且只有一个外键 join
+  #+begin_src python :results output
+  >>> session.query(User).join(Address).\
+           filter(Address.email_address=='jack@google.com').\
+           all()
+  #+end_src
+
+- 无外键或者多个外键 join
+  #+begin_src python :results output
+  query.join(Address, User.id==Address.user_id)    # explicit condition
+  query.join(User.addresses)                       # specify relationship from left to right
+  query.join(Address, User.addresses)              # same, with explicit target
+  #+end_src
+
+- left outer join
+  #+begin_src python :results output
+  query.outerjoin(User.addresses)   # LEFT OUTER JOIN
+  #+end_src
+- 当有query语句中存在多个entities的时候,那么join的顺序是如何设置的
+  1. 默认是从query语句中从左到右
+  2. 可以通过 =select_from= 来显示设置.
+** Using Aliases
+当同一个表需要在query语句内出现多次不同的使用方式,那么就需要aliases(别名)了.
+#+begin_src python :results output
+>>> from sqlalchemy.orm import aliased
+>>> adalias1 = aliased(Address)
+>>> adalias2 = aliased(Address)
+>>> for username, email1, email2 in \
+...     session.query(User.name, adalias1.email_address, adalias2.email_address).\
+...     join(User.addresses.of_type(adalias1)).\
+...     join(User.addresses.of_type(adalias2)).\
+...     filter(adalias1.email_address=='jack@google.com').\
+...     filter(adalias2.email_address=='j25@yahoo.com'):
+...     print(username, email1, email2)
+#+end_src
+
+
+
+
+
+
